@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tách Ảnh từ Video Kunn AOV</title>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.7.1/dist/jszip.min.js"></script>
+    <style>
+        /* Cải thiện giao diện và màu sắc */
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #a1c4fd, #c2e9fb);
+            color: #333;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #2a3d66;
+            margin-top: 40px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+
+        #videoInput {
+            background-color: #fff;
+            border: 2px solid #2a3d66;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        .buttons {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .buttons button {
+            padding: 15px 25px;
+            font-size: 1.2rem;
+            border: none;
+            background-color: #2a3d66;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        .buttons button:hover {
+            background-color: #34495e;
+            transform: scale(1.1);
+        }
+
+        .thumbnail-container {
+            display: inline-block;
+            position: relative;
+            margin: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            transition: transform 0.3s ease;
+        }
+
+        .thumbnail-container:hover {
+            transform: scale(1.05);
+        }
+
+        .thumbnail {
+            width: 150px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        .checkbox {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            padding: 5px;
+        }
+
+        .checkbox input {
+            margin: 0;
+        }
+
+        /* Modal xem ảnh */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0, 0, 0);
+            background-color: rgba(0, 0, 0, 0.9);
+            padding-top: 60px;
+        }
+
+        .modal-content {
+            position: relative;
+            margin: auto;
+            display: block;
+            width: 80%;
+            max-width: 700px;
+        }
+
+        .close {
+            position: absolute;
+            top: 0;
+            right: 25px;
+            color: #fff;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* Tải ảnh */
+        #output {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Tách Ảnh từ Video Kunn AOV</h1>
+<input type="file" id="videoInput" accept="video/*">
+<video id="video" controls style="display: none;"></video>
+
+<div class="buttons">
+    <button id="downloadAll">Tải toàn bộ ảnh</button>
+    <button id="downloadSelected">Tải ảnh đã chọn</button>
+</div>
+
+<div id="output"></div>
+
+<!-- Modal để xem ảnh -->
+<div id="myModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <img id="modalImg" src="" alt="Frame preview">
+    </div>
+</div>
+
+<script>
+    let selectedImages = [];
+    let allImages = [];
+
+    document.getElementById('videoInput').addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        const video = document.getElementById('video');
+        const output = document.getElementById('output');
+        
+        video.src = URL.createObjectURL(file);
+        video.load();
+        output.innerHTML = ''; // Xóa ảnh cũ khi tải video mới
+        selectedImages = []; // Reset danh sách ảnh đã chọn
+        allImages = []; // Reset tất cả ảnh
+
+        video.addEventListener('loadeddata', () => {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            const width = 1920;  // Đặt độ phân giải Full HD
+            const height = 1080; // Đặt độ phân giải Full HD
+            canvas.width = width;
+            canvas.height = height;
+
+            let currentTime = 0;
+            const interval = 0.04; // 40ms, khoảng gần 25 khung hình mỗi giây
+
+            function captureFrame() {
+                video.currentTime = currentTime;
+            }
+
+            video.addEventListener('seeked', () => {
+                context.drawImage(video, 0, 0, width, height);
+                const img = new Image();
+                img.src = canvas.toDataURL('image/jpeg', 1.0);  // Chất lượng cao (1.0)
+                img.classList.add('thumbnail');
+
+                // Tạo phần chứa ảnh và checkbox
+                const container = document.createElement('div');
+                container.classList.add('thumbnail-container');
+                
+                // Tạo checkbox
+                const checkboxContainer = document.createElement('div');
+                checkboxContainer.classList.add('checkbox');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.addEventListener('change', () => {
+                    if (checkbox.checked) {
+                        selectedImages.push(img.src);
+                    } else {
+                        selectedImages = selectedImages.filter(src => src !== img.src);
+                    }
+                });
+                checkboxContainer.appendChild(checkbox);
+
+                // Gắn ảnh và checkbox vào container
+                container.appendChild(checkboxContainer);
+                container.appendChild(img);
+                output.appendChild(container);
+
+                allImages.push(img.src); // Lưu ảnh vào mảng tất cả ảnh
+
+                currentTime += interval;
+                if (currentTime <= video.duration) {
+                    requestAnimationFrame(captureFrame);
+                }
+            });
+
+            captureFrame();
+        });
+    });
+
+    // Tải toàn bộ ảnh (nén thành file ZIP)
+    document.getElementById('downloadAll').addEventListener('click', () => {
+        if (allImages.length > 20) {
+            const zip = new JSZip();
+            const folder = zip.folder("tachjpg");
+
+            allImages.forEach((src, index) => {
+                const imgData = src.replace(/^data:image\/(png|jpeg);base64,/, ""); // Loại bỏ phần header base64
+                folder.file(`image_${index + 1}.jpg`, imgData, { base64: true });
+            });
+
+            zip.generateAsync({ type: "blob" })
+                .then(function(content) {
+                    // Tải file ZIP về
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(content);
+                    link.download = "tachjpg.zip";
+                    link.click();
+                });
+        } else {
+            alert("Số lượng ảnh chưa đủ để nén thành file ZIP!");
+        }
+    });
+
+    // Tải ảnh đã chọn
+    document.getElementById('downloadSelected').addEventListener('click', () => {
+        if (selectedImages.length === 0) {
+            alert('Bạn chưa chọn ảnh nào!');
+            return;
+        }
+
+        const zip = new JSZip();
+        const folder = zip.folder("tachjpg");
+
+        selectedImages.forEach((src, index) => {
+            const imgData = src.replace(/^data:image\/(png|jpeg);base64,/, "");
+            folder.file(`image_${index + 1}.jpg`, imgData, { base64: true });
+        });
+
+        zip.generateAsync({ type: "blob" })
+            .then(function(content) {
+                // Tải file ZIP về
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(content);
+                link.download = "tachjpg_selected.zip";
+                link.click();
+            });
+    });
+
+    // Modal xem ảnh
+    const modal = document.getElementById('myModal');
+    const modalImg = document.getElementById('modalImg');
+    const closeBtn = document.getElementsByClassName("close")[0];
+
+    document.getElementById('output').addEventListener('click', function(event) {
+        if (event.target && event.target.nodeName === "IMG") {
+            modal.style.display = "block";
+            modalImg.src = event.target.src;
+        }
+    });
+
+    closeBtn.addEventListener('click', () => {
+        modal.style.display = "none";
+    });
+
+    window.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            modal.style.display = "none";
+        }
+    });
+</script>
+
+</body>
+</html>
