@@ -1,309 +1,268 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tách Ảnh từ Video Kunn AOV</title>
-    <script src="https://cdn.jsdelivr.net/npm/jszip@3.7.1/dist/jszip.min.js"></script>
-    <style>
-        /* Cải thiện giao diện và màu sắc */
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #a1c4fd, #c2e9fb);
-            color: #333;
-            margin: 0;
-            padding: 0;
-            text-align: center;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trích xuất ảnh từ video - Kunn AOV Shop</title>
+  <style>
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    
+    body { font-family: Arial, sans-serif; background-color: #f0f0f0; color: #333; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+    header { width: 100%; padding: 15px; background-color: #000; color: #fff; display: flex; align-items: center; border-bottom: 4px solid #ff69b4; }
+    
+    
+    .logo { border-radius: 50%; width: 50px; height: 50px; margin-right: 10px; background-color: #ff69b4; }
+    .logo-container { display: flex; align-items: center; }
+    .cre { font-size: 12px; color: #ff69b4; margin-top: 5px; }
+    
+    
+    main { max-width: 900px; margin-top: 20px; background-color: #fff; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); padding: 20px; text-align: center; }
+    .btn { padding: 10px 20px; margin: 10px; background-color: #333; color: #fff; border: none; cursor: pointer; border-radius: 5px; }
+    .btn:hover { background-color: #ff69b4; }
+    .btn-group { margin-top: 20px; }
+    .thumbnail { width: 100px; height: 56px; object-fit: cover; margin: 5px; cursor: pointer; border-radius: 5px; }
+    .selected { border: 2px solid #ff69b4; }
+    .thumbnail-container { display: flex; flex-wrap: wrap; justify-content: center; }
 
-        h1 {
-            font-size: 2.5rem;
-            color: #2a3d66;
-            margin-top: 40px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            font-weight: bold;
-        }
+    
+    .popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); z-index: 10; }
+    .popup h3 { margin-bottom: 20px; }
 
-        #videoInput {
-            background-color: #fff;
-            border: 2px solid #2a3d66;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 20px;
-            font-size: 1rem;
-            cursor: pointer;
-        }
+    
+    .time-selector {
+      margin: 20px 0;
+    }
 
-        .buttons {
-            margin-top: 30px;
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-        }
+    .thumbnail-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      max-width: 800px;
+      justify-content: center;
+    }
 
-        .buttons button {
-            padding: 15px 25px;
-            font-size: 1.2rem;
-            border: none;
-            background-color: #2a3d66;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease, transform 0.3s ease;
-        }
+    .thumbnail {
+      width: 150px;
+      height: auto;
+      cursor: pointer;
+      opacity: 0;
+      transform: scale(0.95);
+      transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+    }
+    .thumbnail.show {
+      opacity: 1;
+      transform: scale(1);
+    }
+    .selected {
+      outline: 3px solid #4CAF50;
+    }
 
-        .buttons button:hover {
-            background-color: #34495e;
-            transform: scale(1.1);
-        }
-
-        .thumbnail-container {
-            display: inline-block;
-            position: relative;
-            margin: 15px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
-            transition: transform 0.3s ease;
-        }
-
-        .thumbnail-container:hover {
-            transform: scale(1.05);
-        }
-
-        .thumbnail {
-            width: 150px;
-            height: 100px;
-            object-fit: cover;
-            border-radius: 10px;
-            cursor: pointer;
-        }
-
-        .checkbox {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background-color: rgba(255, 255, 255, 0.7);
-            border-radius: 50%;
-            padding: 5px;
-        }
-
-        .checkbox input {
-            margin: 0;
-        }
-
-        /* Modal xem ảnh */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgb(0, 0, 0);
-            background-color: rgba(0, 0, 0, 0.9);
-            padding-top: 60px;
-        }
-
-        .modal-content {
-            position: relative;
-            margin: auto;
-            display: block;
-            width: 80%;
-            max-width: 700px;
-        }
-
-        .close {
-            position: absolute;
-            top: 0;
-            right: 25px;
-            color: #fff;
-            font-size: 40px;
-            font-weight: bold;
-            transition: 0.3s;
-        }
-
-        .close:hover,
-        .close:focus {
-            color: #bbb;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        /* Tải ảnh */
-        #output {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            padding-top: 20px;
-        }
-    </style>
+    
+    .preview-popup {
+      display: none; 
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(0, 0, 0, 0.8);
+      padding: 20px;
+      border-radius: 10px;
+      z-index: 20;
+    }
+    .preview-popup img {
+      max-width: 90vw;
+      max-height: 80vh;
+      border-radius: 10px;
+    }
+    .close-preview {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 24px;
+      color: white;
+      cursor: pointer;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
 </head>
 <body>
+  
+  <header>
+    <img src="Logo.png" alt="Logo" class="logo">
+    <div class="shop-name">Kunn AOV </div>
+  </header>
 
-<h1>Tách Ảnh từ Video Kunn AOV</h1>
-<input type="file" id="videoInput" accept="video/*">
-<video id="video" controls style="display: none;"></video>
+  
+  <main>
+    <h1>Trích xuất ảnh từ video</h1>
+    <p>Chọn một video để trích xuất ảnh.</p>
 
-<div class="buttons">
-    <button id="downloadAll">Tải toàn bộ ảnh</button>
-    <button id="downloadSelected">Tải ảnh đã chọn</button>
-</div>
-
-<div id="output"></div>
-
-<!-- Modal để xem ảnh -->
-<div id="myModal" class="modal">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <img id="modalImg" src="" alt="Frame preview">
+    
+    <div class="time-selector">
+      <label for="timeUnit">Chọn đơn vị thời gian:</label>
+      <select id="timeUnit">
+        <option value="ms">Mili giây</option>
+        <option value="s" selected>Giây</option>
+        <option value="m">Phút</option>
+      </select>
     </div>
-</div>
 
-<script>
-    let selectedImages = [];
-    let allImages = [];
+    <input type="file" id="videoInput" accept="video/*" class="btn" />
+    <div id="videoPlayer" style="display:none;">
+      <video id="video" controls></video>
+    </div>
+    <div class="thumbnail-container" id="thumbnailContainer"></div>
 
-    document.getElementById('videoInput').addEventListener('change', function(event) {
-        const file = event.target.files[0];
-        const video = document.getElementById('video');
-        const output = document.getElementById('output');
+    <div class="btn-group">
+      <button id="selectAllBtn" class="btn">Chọn tất cả ảnh</button>
+      <button id="downloadSelectedBtn" class="btn">Tải ảnh đã chọn</button>
+    </div>
+
+    
+    <div class="popup" id="downloadPopup">
+      <h3>Bạn muốn lưu ảnh theo cách nào?</h3>
+      <button id="downloadZip" class="btn">Lưu dưới dạng ZIP</button>
+      <button id="downloadDirect" class="btn">Lưu trực tiếp</button>
+    </div>
+
+    
+    <div class="preview-popup" id="previewPopup">
+      <span class="close-preview" id="closePreview">&times;</span>
+      <img id="previewImage" src="" alt="Xem trước ảnh">
+    </div>
+  </main>
+
+  
+  <script>
+    const videoInput = document.getElementById('videoInput');
+    const video = document.getElementById('video');
+    const thumbnailContainer = document.getElementById('thumbnailContainer');
+    const downloadPopup = document.getElementById('downloadPopup');
+    const previewPopup = document.getElementById('previewPopup');
+    const previewImage = document.getElementById('previewImage');
+    const closePreview = document.getElementById('closePreview');
+    const timeUnitSelect = document.getElementById('timeUnit');
+    let thumbnails = [];
+    let timeUnit = 's';  
+
+    
+    timeUnitSelect.addEventListener('change', () => {
+      timeUnit = timeUnitSelect.value;
+    });
+
+    
+    videoInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        
+        thumbnails = [];
+        thumbnailContainer.innerHTML = '';
+        
         
         video.src = URL.createObjectURL(file);
-        video.load();
-        output.innerHTML = ''; // Xóa ảnh cũ khi tải video mới
-        selectedImages = []; // Reset danh sách ảnh đã chọn
-        allImages = []; // Reset tất cả ảnh
-
-        video.addEventListener('loadeddata', () => {
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            const width = 1920;  // Đặt độ phân giải Full HD
-            const height = 1080; // Đặt độ phân giải Full HD
-            canvas.width = width;
-            canvas.height = height;
-
-            let currentTime = 0;
-            const interval = 0.04; // 40ms, khoảng gần 25 khung hình mỗi giây
-
-            function captureFrame() {
-                video.currentTime = currentTime;
-            }
-
-            video.addEventListener('seeked', () => {
-                context.drawImage(video, 0, 0, width, height);
-                const img = new Image();
-                img.src = canvas.toDataURL('image/jpeg', 1.0);  // Chất lượng cao (1.0)
-                img.classList.add('thumbnail');
-
-                // Tạo phần chứa ảnh và checkbox
-                const container = document.createElement('div');
-                container.classList.add('thumbnail-container');
-                
-                // Tạo checkbox
-                const checkboxContainer = document.createElement('div');
-                checkboxContainer.classList.add('checkbox');
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.addEventListener('change', () => {
-                    if (checkbox.checked) {
-                        selectedImages.push(img.src);
-                    } else {
-                        selectedImages = selectedImages.filter(src => src !== img.src);
-                    }
-                });
-                checkboxContainer.appendChild(checkbox);
-
-                // Gắn ảnh và checkbox vào container
-                container.appendChild(checkboxContainer);
-                container.appendChild(img);
-                output.appendChild(container);
-
-                allImages.push(img.src); // Lưu ảnh vào mảng tất cả ảnh
-
-                currentTime += interval;
-                if (currentTime <= video.duration) {
-                    requestAnimationFrame(captureFrame);
-                }
-            });
-
-            captureFrame();
-        });
+        video.style.display = 'block';
+        
+        
+        await extractImagesFromVideo(video);
+      }
     });
 
-    // Tải toàn bộ ảnh (nén thành file ZIP)
-    document.getElementById('downloadAll').addEventListener('click', () => {
-        if (allImages.length > 20) {
-            const zip = new JSZip();
-            const folder = zip.folder("tachjpg");
+    async function extractImagesFromVideo(video) {
+      video.currentTime = 0;
+      video.addEventListener('loadeddata', () => {
+        const videoDuration = Math.floor(video.duration);
+        const timeInterval = getTimeInterval(timeUnit);
 
-            allImages.forEach((src, index) => {
-                const imgData = src.replace(/^data:image\/(png|jpeg);base64,/, ""); // Loại bỏ phần header base64
-                folder.file(`image_${index + 1}.jpg`, imgData, { base64: true });
-            });
-
-            zip.generateAsync({ type: "blob" })
-                .then(function(content) {
-                    // Tải file ZIP về
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(content);
-                    link.download = "tachjpg.zip";
-                    link.click();
-                });
-        } else {
-            alert("Số lượng ảnh chưa đủ để nén thành file ZIP!");
+        for (let time = 0; time < videoDuration; time += timeInterval) {
+          setTimeout(() => captureFrame(video, time), time * 1000);  
         }
+      });
+    }
+
+    function getTimeInterval(unit) {
+      switch (unit) {
+        case 'ms': return 0.1; 
+        case 's': return 1; 
+        case 'm': return 60; 
+        default: return 1;
+      }
+    }
+
+    function captureFrame(video, time) {
+      video.currentTime = time;
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataURL = canvas.toDataURL('image/jpeg', 1.0);
+      addThumbnail(dataURL);
+    }
+
+    function addThumbnail(dataURL) {
+      const img = document.createElement('img');
+      img.src = dataURL;
+      img.classList.add('thumbnail');
+      img.addEventListener('click', () => {
+        previewImage.src = dataURL;
+        previewPopup.style.display = 'block';
+      });
+      img.addEventListener('click', () => img.classList.toggle('selected'));
+      thumbnailContainer.appendChild(img);
+      setTimeout(() => img.classList.add('show'), 10);
+      thumbnails.push(dataURL);
+    }
+
+    closePreview.addEventListener('click', () => {
+      previewPopup.style.display = 'none';
     });
 
-    // Tải ảnh đã chọn
-    document.getElementById('downloadSelected').addEventListener('click', () => {
-        if (selectedImages.length === 0) {
-            alert('Bạn chưa chọn ảnh nào!');
-            return;
-        }
-
-        const zip = new JSZip();
-        const folder = zip.folder("tachjpg");
-
-        selectedImages.forEach((src, index) => {
-            const imgData = src.replace(/^data:image\/(png|jpeg);base64,/, "");
-            folder.file(`image_${index + 1}.jpg`, imgData, { base64: true });
-        });
-
-        zip.generateAsync({ type: "blob" })
-            .then(function(content) {
-                // Tải file ZIP về
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(content);
-                link.download = "tachjpg_selected.zip";
-                link.click();
-            });
+    document.getElementById('selectAllBtn').addEventListener('click', () => {
+      document.querySelectorAll('.thumbnail').forEach((img) => img.classList.add('selected'));
     });
 
-    // Modal xem ảnh
-    const modal = document.getElementById('myModal');
-    const modalImg = document.getElementById('modalImg');
-    const closeBtn = document.getElementsByClassName("close")[0];
-
-    document.getElementById('output').addEventListener('click', function(event) {
-        if (event.target && event.target.nodeName === "IMG") {
-            modal.style.display = "block";
-            modalImg.src = event.target.src;
-        }
+    document.getElementById('downloadSelectedBtn').addEventListener('click', () => {
+      downloadPopup.style.display = 'block';
     });
 
-    closeBtn.addEventListener('click', () => {
-        modal.style.display = "none";
+    document.getElementById('downloadZip').addEventListener('click', async () => {
+      const zip = new JSZip();
+      const imagesFolder = zip.folder('Tachjpgbykunaov');
+      const selectedImages = [...document.querySelectorAll('.thumbnail.selected')].map(img => img.src);
+
+      selectedImages.forEach((src, index) => {
+        imagesFolder.file(`image_${index + 1}.jpg`, dataURLtoBlob(src));
+      });
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      saveAs(zipBlob, 'images.zip');
+      downloadPopup.style.display = 'none';
     });
 
-    window.addEventListener('click', function(event) {
-        if (event.target === modal) {
-            modal.style.display = "none";
-        }
-    });
-</script>
+    document.getElementById('downloadDirect').addEventListener('click', () => {
+      const selectedImages = [...document.querySelectorAll('.thumbnail.selected')].map(img => img.src);
 
+      selectedImages.forEach((src, index) => {
+        const link = document.createElement('a');
+        link.href = src;
+        link.download = `image_${index + 1}.jpg`;
+        link.click();
+      });
+      downloadPopup.style.display = 'none';
+    });
+
+    function dataURLtoBlob(dataURL) {
+      const byteString = atob(dataURL.split(',')[1]);
+      const mimeString = dataURL.split(',')[0].split(':')[1].split(';')[0];
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      return new Blob([ab], { type: mimeString });
+    }
+  </script>
 </body>
 </html>
